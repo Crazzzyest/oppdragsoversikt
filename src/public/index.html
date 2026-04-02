@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Naava Takst - Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+
+    .header { background: #1a5c2a; color: white; padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 22px; font-weight: 600; }
+    .header .mode { background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 12px; font-size: 13px; }
+    .header .mode.test { background: #ff9800; color: #333; font-weight: 600; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .stat-card .label { font-size: 13px; color: #888; margin-bottom: 6px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #1a5c2a; }
+    .stat-card .value.warn { color: #e65100; }
+
+    .section { background: white; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .section h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1a5c2a; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 12px; background: #f9f9f9; border-bottom: 2px solid #e0e0e0; font-weight: 600; color: #555; white-space: nowrap; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #f5faf6; }
+
+    .status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+    .status-mottatt { background: #fff3e0; color: #e65100; }
+    .status-avtalt { background: #e3f2fd; color: #1565c0; }
+    .status-befart { background: #e8eaf6; color: #283593; }
+    .status-utkast { background: #fce4ec; color: #c62828; }
+    .status-endelig { background: #f3e5f5; color: #6a1b9a; }
+    .status-faktureres { background: #e8f5e9; color: #2e7d32; }
+    .status-fakturert { background: #c8e6c9; color: #1b5e20; }
+    .status-fullfort { background: #d9ead3; color: #1a5c2a; }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-primary { background: #1a5c2a; color: white; }
+    .btn-secondary { background: #e0e0e0; color: #333; }
+    .btn-warning { background: #ff9800; color: white; }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 24px; border-radius: 8px; color: white; font-size: 14px; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+    .toast.show { display: block; animation: slideIn 0.3s ease; }
+
+    .loading { text-align: center; padding: 40px; color: #888; }
+    .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #e0e0e0; border-top-color: #1a5c2a; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+
+    .empty { text-align: center; padding: 32px; color: #aaa; font-style: italic; }
+
+    .oppdrag-link { color: #1a5c2a; text-decoration: none; font-weight: 500; }
+    .oppdrag-link:hover { text-decoration: underline; }
+
+    .status-bar { display: flex; gap: 4px; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+    .status-bar div { height: 100%; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    @media (max-width: 768px) {
+      .container { padding: 12px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      table { font-size: 12px; }
+      th, td { padding: 8px 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Naava Takst</h1>
+    <span class="mode" id="modeLabel">Laster...</span>
+  </div>
+
+  <div class="container">
+    <div class="actions">
+      <button class="btn btn-primary" onclick="runAction('scan-emails')">Scan e-post</button>
+      <button class="btn btn-primary" onclick="runAction('process-ivit')">Hent iVit-data</button>
+      <button class="btn btn-secondary" onclick="runAction('update-dashboard')">Oppdater dashboard</button>
+      <button class="btn btn-secondary" onclick="runAction('check-reminders')">Sjekk påminnelser</button>
+      <button class="btn btn-warning" onclick="runAction('send-faktura')">Send faktura til regnskap</button>
+      <button class="btn btn-secondary" onclick="runAction('send-weekly-report')">Send ukerapport</button>
+      <button class="btn btn-secondary" onclick="loadData()">Oppdater visning</button>
+    </div>
+
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="label">Laster...</div><div class="value">-</div></div>
+    </div>
+
+    <div class="section">
+      <h2>Aktive oppdrag</h2>
+      <div id="oppdragTable"><div class="loading"><span class="spinner"></span> Henter data...</div></div>
+    </div>
+
+    <div class="section">
+      <h2>Statusoversikt</h2>
+      <div id="statusOverview"><div class="loading"><span class="spinner"></span></div></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API = '';
+
+    async function loadData() {
+      try {
+        const res = await fetch(`${API}/api/dashboard-data`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        renderStats(data);
+        renderTable(data.oppdrag);
+        renderStatusOverview(data.statusCounts);
+        document.getElementById('modeLabel').textContent = data.testMode ? 'TESTMODUS' : 'Produksjon';
+        document.getElementById('modeLabel').className = data.testMode ? 'mode test' : 'mode';
+      } catch (e) {
+        document.getElementById('oppdragTable').innerHTML = `<div class="empty">Kunne ikke hente data: ${e.message}</div>`;
+      }
+    }
+
+    function renderStats(data) {
+      const fmt = (n) => n != null ? Number(n).toLocaleString('nb-NO') + ' kr' : '0 kr';
+      const grid = document.getElementById('statsGrid');
+      grid.innerHTML = `
+        <div class="stat-card"><div class="label">Totalt oppdrag</div><div class="value">${data.total || 0}</div></div>
+        <div class="stat-card"><div class="label">Aktive</div><div class="value">${data.active || 0}</div></div>
+        <div class="stat-card"><div class="label">Utestående (inkl mva)</div><div class="value warn">${fmt(data.utestaendeInkl)}</div></div>
+        <div class="stat-card"><div class="label">Omsetning denne mnd</div><div class="value">${fmt(data.omsMaaned)}</div></div>
+        <div class="stat-card"><div class="label">Omsetning i år</div><div class="value">${fmt(data.omsAar)}</div></div>
+        <div class="stat-card"><div class="label">Snitt pris (inkl)</div><div class="value">${fmt(data.snittPrisInkl)}</div></div>
+      `;
+    }
+
+    function statusClass(s) {
+      const map = {
+        'Mottatt': 'mottatt', 'Avtalt befaring': 'avtalt', 'Befart': 'befart',
+        'Utkast': 'utkast', 'Endelig rapport': 'endelig',
+        'Kan faktureres': 'faktureres', 'Fakturert': 'fakturert', 'Oppdrag fullført': 'fullfort'
+      };
+      return 'status status-' + (map[s] || 'mottatt');
+    }
+
+    function cleanAddress(addr) {
+      if (!addr) return '';
+      const m = String(addr).match(/=HYPERLINK\("([^"]+)","([^"]+)"\)/);
+      if (m) return `<a href="${m[1]}" target="_blank" class="oppdrag-link">${m[2].replace(/""/g, '"')}</a>`;
+      return addr;
+    }
+
+    function renderTable(oppdrag) {
+      const container = document.getElementById('oppdragTable');
+      if (!oppdrag || oppdrag.length === 0) {
+        container.innerHTML = '<div class="empty">Ingen aktive oppdrag</div>';
+        return;
+      }
+      const fmt = (n) => n ? Number(n).toLocaleString('nb-NO') + ' kr' : '-';
+      let html = `<table>
+        <thead><tr>
+          <th>Nr</th><th>Dato</th><th>Adresse</th><th>Type</th>
+          <th>Megler</th><th>Status</th><th>Pris inkl</th><th>Reise inkl</th>
+        </tr></thead><tbody>`;
+      for (const o of oppdrag) {
+        html += `<tr>
+          <td>${o.oppdragsnr || ''}</td>
+          <td>${o.datoMottatt || ''}</td>
+          <td>${cleanAddress(o.adresse)}</td>
+          <td>${o.oppdragstype || ''}</td>
+          <td>${o.megler || ''}</td>
+          <td><span class="${statusClass(o.status)}">${o.status || ''}</span></td>
+          <td style="text-align:right">${fmt(o.prisInkl)}</td>
+          <td style="text-align:right">${fmt(o.reiseInkl)}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function renderStatusOverview(counts) {
+      const container = document.getElementById('statusOverview');
+      if (!counts) { container.innerHTML = ''; return; }
+      const colors = {
+        'Mottatt': '#ff9800', 'Avtalt befaring': '#42a5f5', 'Befart': '#5c6bc0',
+        'Utkast': '#ef5350', 'Endelig rapport': '#ab47bc',
+        'Kan faktureres': '#66bb6a', 'Fakturert': '#43a047', 'Oppdrag fullført': '#a5d6a7'
+      };
+      const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+      let bar = '<div class="status-bar">';
+      let legend = '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:13px;">';
+      for (const [status, count] of Object.entries(counts)) {
+        if (count === 0) continue;
+        const color = colors[status] || '#ccc';
+        const pct = (count / total * 100).toFixed(1);
+        bar += `<div style="width:${pct}%;background:${color}" title="${status}: ${count}"></div>`;
+        legend += `<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${color};margin-right:4px;vertical-align:middle;"></span>${status}: ${count}</span>`;
+      }
+      bar += '</div>';
+      legend += '</div>';
+      container.innerHTML = bar + legend;
+    }
+
+    async function runAction(action) {
+      const btn = event.target;
+      btn.disabled = true;
+      const originalText = btn.textContent;
+      btn.textContent = 'Kjører...';
+      try {
+        const res = await fetch(`${API}/api/${action}`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        showToast(`${action}: OK`, 'success');
+        if (['scan-emails', 'process-ivit', 'update-dashboard', 'send-faktura'].includes(action)) {
+          setTimeout(loadData, 1000);
+        }
+      } catch (e) {
+        showToast(`${action}: ${e.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+    function showToast(msg, type) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => { toast.className = 'toast'; }, 4000);
+    }
+
+    loadData();
+    setInterval(loadData, 60000);
+  </script>
+</body>
+</html>

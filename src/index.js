@@ -1,9 +1,12 @@
 const express = require('express');
+const path = require('path');
 const cron = require('node-cron');
 const config = require('./config');
+const { COL } = require('./columns');
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================
 // ROUTES
@@ -11,6 +14,77 @@ app.use(express.json());
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', testMode: config.testMode, timestamp: new Date().toISOString() });
+});
+
+// --- Dashboard data (for frontend) ---
+app.get('/api/dashboard-data', async (req, res) => {
+  try {
+    const google = require('./google');
+    const { parseDateString } = require('./utils');
+    const data = await google.getSheetData(config.sheet.name);
+
+    if (!data || data.length < 2) {
+      return res.json({ success: true, testMode: config.testMode, total: 0, active: 0, oppdrag: [], statusCounts: {} });
+    }
+
+    const now = new Date();
+    const curMonth = now.getMonth(), curYear = now.getFullYear();
+    const statusCounts = {};
+    const oppdrag = [];
+    let utestaendeInkl = 0, omsMaaned = 0, omsAar = 0;
+    let sumPris = 0, countPris = 0;
+    const doneStatuses = ['Fakturert', 'Oppdrag kansellert', 'Oppdrag fullført'];
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const status = row[COL.STATUS - 1] || '';
+      const prisInkl = Number(row[COL.PRIS_INKL - 1] || 0);
+      const reiseInkl = Number(row[COL.REISE_INKL - 1] || 0);
+
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+      if (status === 'Kan faktureres') {
+        utestaendeInkl += prisInkl + reiseInkl;
+      }
+
+      if (status === 'Fakturert' || status === 'Kan faktureres') {
+        omsAar += prisInkl;
+        const sDato = parseDateString(row[COL.DATO_STATUSENDRING - 1]);
+        if (sDato && sDato.getMonth() === curMonth && sDato.getFullYear() === curYear) {
+          omsMaaned += prisInkl;
+        }
+        if (prisInkl > 0) { sumPris += prisInkl; countPris++; }
+      }
+
+      if (!doneStatuses.includes(status)) {
+        oppdrag.push({
+          oppdragsnr: row[COL.OPPDRAGSNR - 1] || '',
+          datoMottatt: row[COL.DATO_MOTTATT - 1] || '',
+          adresse: row[COL.ADRESSE - 1] || '',
+          oppdragstype: row[COL.OPPDRAGSTYPE - 1] || '',
+          megler: row[COL.MEGLER - 1] || '',
+          status,
+          prisInkl: prisInkl || null,
+          reiseInkl: reiseInkl || null,
+        });
+      }
+    }
+
+    const total = data.length - 1;
+    const active = total - (statusCounts['Fakturert'] || 0) - (statusCounts['Oppdrag kansellert'] || 0) - (statusCounts['Oppdrag fullført'] || 0);
+
+    res.json({
+      success: true,
+      testMode: config.testMode,
+      total, active, utestaendeInkl, omsMaaned, omsAar,
+      snittPrisInkl: countPris ? Math.round(sumPris / countPris) : 0,
+      oppdrag,
+      statusCounts,
+    });
+  } catch (e) {
+    console.error('dashboard-data error:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // --- Email scanning ---
