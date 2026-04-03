@@ -56,18 +56,19 @@ app.get('/api/dashboard-data', async (req, res) => {
         if (prisInkl > 0) { sumPris += prisInkl; countPris++; }
       }
 
-      if (!doneStatuses.includes(status)) {
-        oppdrag.push({
-          oppdragsnr: row[COL.OPPDRAGSNR - 1] || '',
-          datoMottatt: row[COL.DATO_MOTTATT - 1] || '',
-          adresse: row[COL.ADRESSE - 1] || '',
-          oppdragstype: row[COL.OPPDRAGSTYPE - 1] || '',
-          megler: row[COL.MEGLER - 1] || '',
-          status,
-          prisInkl: prisInkl || null,
-          reiseInkl: reiseInkl || null,
-        });
-      }
+      // Include all oppdrag (not just active) so tabs can filter
+      oppdrag.push({
+        oppdragsnr: row[COL.OPPDRAGSNR - 1] || '',
+        datoMottatt: row[COL.DATO_MOTTATT - 1] || '',
+        adresse: row[COL.ADRESSE - 1] || '',
+        oppdragstype: row[COL.OPPDRAGSTYPE - 1] || '',
+        megler: row[COL.MEGLER - 1] || '',
+        selger: row[COL.SELGER - 1] || '',
+        selgerTlf: row[COL.SELGER_TLF - 1] || '',
+        status,
+        prisInkl: prisInkl || null,
+        reiseInkl: reiseInkl || null,
+      });
     }
 
     const total = data.length - 1;

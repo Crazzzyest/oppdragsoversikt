@@ -3,228 +3,380 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Naava Takst - Dashboard</title>
+  <title>Naava Takst</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
 
-    .header { background: #1a5c2a; color: white; padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-size: 22px; font-weight: 600; }
-    .header .mode { background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 12px; font-size: 13px; }
-    .header .mode.test { background: #ff9800; color: #333; font-weight: 600; }
+    /* ── Top nav ── */
+    .topnav { background: #1a5c2a; display: flex; align-items: center; padding: 0 24px; height: 56px; gap: 8px; }
+    .topnav .logo { color: white; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; margin-right: 24px; }
+    .nav-btn { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); border: none; padding: 8px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+    .nav-btn:hover { background: rgba(255,255,255,0.22); color: white; }
+    .nav-btn.active { background: white; color: #1a5c2a; font-weight: 600; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .mode-badge { padding: 4px 14px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .mode-badge.prod { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); }
+    .mode-badge.test { background: #ff9800; color: #333; }
 
-    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    /* ── Filter tabs ── */
+    .tab-bar { background: white; border-bottom: 1px solid #e0e0e0; padding: 0 24px; display: flex; align-items: center; gap: 0; overflow-x: auto; }
+    .tab { padding: 14px 22px; font-size: 14px; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; color: #666; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+    .tab:hover { color: #333; background: #f9f9f9; }
+    .tab.active { color: #1a5c2a; border-bottom-color: #1a5c2a; font-weight: 600; }
+    .tab .count { background: #e8e8e8; color: #555; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+    .tab.active .count { background: #1a5c2a; color: white; }
+    .tab-color { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-    .stat-card .label { font-size: 13px; color: #888; margin-bottom: 6px; }
-    .stat-card .value { font-size: 28px; font-weight: 700; color: #1a5c2a; }
-    .stat-card .value.warn { color: #e65100; }
+    /* ── Stats strip ── */
+    .stats-strip { background: white; border-bottom: 1px solid #e0e0e0; padding: 16px 24px; display: flex; gap: 32px; overflow-x: auto; }
+    .stat-item { display: flex; flex-direction: column; min-width: 140px; }
+    .stat-item .label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .stat-item .val { font-size: 22px; font-weight: 700; color: #1a5c2a; }
+    .stat-item .val.warn { color: #e65100; }
 
-    .section { background: white; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-    .section h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1a5c2a; }
-
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { text-align: left; padding: 10px 12px; background: #f9f9f9; border-bottom: 2px solid #e0e0e0; font-weight: 600; color: #555; white-space: nowrap; }
-    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
-    tr:hover td { background: #f5faf6; }
-
-    .status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
-    .status-mottatt { background: #fff3e0; color: #e65100; }
-    .status-avtalt { background: #e3f2fd; color: #1565c0; }
-    .status-befart { background: #e8eaf6; color: #283593; }
-    .status-utkast { background: #fce4ec; color: #c62828; }
-    .status-endelig { background: #f3e5f5; color: #6a1b9a; }
-    .status-faktureres { background: #e8f5e9; color: #2e7d32; }
-    .status-fakturert { background: #c8e6c9; color: #1b5e20; }
-    .status-fullfort { background: #d9ead3; color: #1a5c2a; }
-
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
-    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    /* ── Toolbar ── */
+    .toolbar { padding: 16px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .search-box { flex: 1; min-width: 200px; max-width: 400px; padding: 10px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; transition: border 0.15s; }
+    .search-box:focus { border-color: #1a5c2a; }
+    .toolbar-actions { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+    .btn { padding: 9px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn-primary { background: #1a5c2a; color: white; }
-    .btn-secondary { background: #e0e0e0; color: #333; }
-    .btn-warning { background: #ff9800; color: white; }
+    .btn-outline { background: white; color: #555; border: 1px solid #ddd; }
+    .btn-outline:hover { background: #f5f5f5; }
+    .btn-warn { background: #ff9800; color: white; }
 
-    .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 24px; border-radius: 8px; color: white; font-size: 14px; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    /* ── Oppdrag cards ── */
+    .card-list { padding: 0 24px 24px; }
+    .oppdrag-card { background: white; border-radius: 10px; padding: 20px 24px; margin-bottom: 12px; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: box-shadow 0.15s; cursor: default; }
+    .oppdrag-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.1); }
+
+    .card-icon { width: 52px; height: 52px; border-radius: 8px; background: #e8f5e9; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+
+    .card-main { flex: 1; min-width: 0; }
+    .card-address { font-size: 15px; font-weight: 600; color: #222; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .card-address a { color: #222; text-decoration: none; }
+    .card-address a:hover { color: #1a5c2a; text-decoration: underline; }
+    .card-pin { color: #e65100; font-size: 16px; }
+    .card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .card-tag { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .tag-mottatt { background: #fff3e0; color: #e65100; }
+    .tag-avtalt { background: #e3f2fd; color: #1565c0; }
+    .tag-befart { background: #e8eaf6; color: #283593; }
+    .tag-utkast { background: #fce4ec; color: #c62828; }
+    .tag-endelig { background: #f3e5f5; color: #6a1b9a; }
+    .tag-faktureres { background: #e8f5e9; color: #2e7d32; }
+    .tag-fakturert { background: #c8e6c9; color: #1b5e20; }
+    .tag-fullfort { background: #d9ead3; color: #1a5c2a; }
+    .tag-type { background: #f5f5f5; color: #666; }
+    .card-dates { font-size: 12px; color: #999; margin-top: 4px; }
+
+    .card-info { display: flex; flex-direction: column; align-items: flex-start; min-width: 160px; }
+    .card-info .name { font-size: 14px; font-weight: 500; color: #333; }
+    .card-info .phone { font-size: 13px; color: #888; }
+
+    .card-price { text-align: right; min-width: 110px; }
+    .card-price .amount { font-size: 16px; font-weight: 700; color: #1a5c2a; }
+    .card-price .sub { font-size: 11px; color: #999; }
+
+    /* ── Pagination ── */
+    .pagination { padding: 12px 24px 24px; display: flex; justify-content: flex-end; align-items: center; gap: 12px; font-size: 13px; color: #888; }
+    .pagination select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    .page-btn { width: 32px; height: 32px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #555; }
+    .page-btn:hover { background: #f5f5f5; }
+    .page-btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* ── Empty / loading ── */
+    .loading { text-align: center; padding: 60px; color: #888; }
+    .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid #e0e0e0; border-top-color: #1a5c2a; border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 12px; }
+    .empty { text-align: center; padding: 60px; color: #aaa; font-size: 15px; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 24px; border-radius: 8px; color: white; font-size: 14px; z-index: 1000; display: none; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
     .toast.success { background: #2e7d32; }
     .toast.error { background: #c62828; }
     .toast.show { display: block; animation: slideIn 0.3s ease; }
 
-    .loading { text-align: center; padding: 40px; color: #888; }
-    .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #e0e0e0; border-top-color: #1a5c2a; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
-
-    .empty { text-align: center; padding: 32px; color: #aaa; font-style: italic; }
-
-    .oppdrag-link { color: #1a5c2a; text-decoration: none; font-weight: 500; }
-    .oppdrag-link:hover { text-decoration: underline; }
-
-    .status-bar { display: flex; gap: 4px; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 8px; }
-    .status-bar div { height: 100%; }
-
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-    @media (max-width: 768px) {
-      .container { padding: 12px; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      table { font-size: 12px; }
-      th, td { padding: 8px 6px; }
+    @media (max-width: 900px) {
+      .oppdrag-card { flex-wrap: wrap; gap: 12px; padding: 16px; }
+      .card-info, .card-price { min-width: auto; }
+      .stats-strip { gap: 20px; }
+      .toolbar { padding: 12px 16px; }
+      .card-list { padding: 0 12px 12px; }
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>Naava Takst</h1>
-    <span class="mode" id="modeLabel">Laster...</span>
+
+  <!-- Top navigation -->
+  <nav class="topnav">
+    <div class="logo">NAAVA</div>
+    <button class="nav-btn active" onclick="setView('oppdrag')">Oppdrag</button>
+    <button class="nav-btn" onclick="runAction('scan-emails')">Scan e-post</button>
+    <button class="nav-btn" onclick="runAction('process-ivit')">Hent iVit</button>
+    <button class="nav-btn" onclick="runAction('send-faktura')">Fakturering</button>
+    <div class="nav-right">
+      <button class="nav-btn" onclick="runAction('send-weekly-report')">Ukerapport</button>
+      <span class="mode-badge prod" id="modeLabel">...</span>
+    </div>
+  </nav>
+
+  <!-- Filter tabs -->
+  <div class="tab-bar" id="tabBar">
+    <div class="tab active" data-filter="alle">Alle oppdrag <span class="count" id="countAlle">0</span></div>
+    <div class="tab" data-filter="Mottatt"><span class="tab-color" style="background:#ff9800"></span>Mottatt <span class="count" id="countMottatt">0</span></div>
+    <div class="tab" data-filter="Avtalt befaring"><span class="tab-color" style="background:#42a5f5"></span>Befaringer <span class="count" id="countAvtalt">0</span></div>
+    <div class="tab" data-filter="Befart"><span class="tab-color" style="background:#5c6bc0"></span>Befart <span class="count" id="countBefart">0</span></div>
+    <div class="tab" data-filter="arbeid"><span class="tab-color" style="background:#ab47bc"></span>Under arbeid <span class="count" id="countArbeid">0</span></div>
+    <div class="tab" data-filter="Kan faktureres"><span class="tab-color" style="background:#66bb6a"></span>Kan faktureres <span class="count" id="countFaktureres">0</span></div>
+    <div class="tab" data-filter="ferdig"><span class="tab-color" style="background:#43a047"></span>Ferdige <span class="count" id="countFerdig">0</span></div>
   </div>
 
-  <div class="container">
-    <div class="actions">
-      <button class="btn btn-primary" onclick="runAction('scan-emails')">Scan e-post</button>
-      <button class="btn btn-primary" onclick="runAction('process-ivit')">Hent iVit-data</button>
-      <button class="btn btn-secondary" onclick="runAction('update-dashboard')">Oppdater dashboard</button>
-      <button class="btn btn-secondary" onclick="runAction('check-reminders')">Sjekk påminnelser</button>
-      <button class="btn btn-warning" onclick="runAction('send-faktura')">Send faktura til regnskap</button>
-      <button class="btn btn-secondary" onclick="runAction('send-weekly-report')">Send ukerapport</button>
-      <button class="btn btn-secondary" onclick="loadData()">Oppdater visning</button>
-    </div>
+  <!-- Stats strip -->
+  <div class="stats-strip" id="statsStrip">
+    <div class="stat-item"><span class="label">Totalt</span><span class="val" id="statTotal">-</span></div>
+    <div class="stat-item"><span class="label">Aktive</span><span class="val" id="statActive">-</span></div>
+    <div class="stat-item"><span class="label">Utestående</span><span class="val warn" id="statUtestaaende">-</span></div>
+    <div class="stat-item"><span class="label">Denne mnd</span><span class="val" id="statMaaned">-</span></div>
+    <div class="stat-item"><span class="label">I år</span><span class="val" id="statAar">-</span></div>
+    <div class="stat-item"><span class="label">Snittpris</span><span class="val" id="statSnitt">-</span></div>
+  </div>
 
-    <div class="stats-grid" id="statsGrid">
-      <div class="stat-card"><div class="label">Laster...</div><div class="value">-</div></div>
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input type="text" class="search-box" id="searchBox" placeholder="Raskt søk..." oninput="filterCards()">
+    <div class="toolbar-actions">
+      <button class="btn btn-outline" onclick="runAction('check-reminders')">Påminnelser</button>
+      <button class="btn btn-outline" onclick="runAction('update-dashboard')">Oppdater Sheet</button>
+      <button class="btn btn-outline" onclick="loadData()">Oppdater</button>
     </div>
+  </div>
 
-    <div class="section">
-      <h2>Aktive oppdrag</h2>
-      <div id="oppdragTable"><div class="loading"><span class="spinner"></span> Henter data...</div></div>
-    </div>
+  <!-- Oppdrag list -->
+  <div class="card-list" id="cardList">
+    <div class="loading"><div class="spinner"></div><br>Henter oppdrag...</div>
+  </div>
 
-    <div class="section">
-      <h2>Statusoversikt</h2>
-      <div id="statusOverview"><div class="loading"><span class="spinner"></span></div></div>
-    </div>
+  <!-- Pagination -->
+  <div class="pagination" id="pagination" style="display:none">
+    <span>Elementer per side</span>
+    <select id="pageSize" onchange="changePage(1)">
+      <option value="10">10</option>
+      <option value="25">25</option>
+      <option value="50">50</option>
+    </select>
+    <span id="pageInfo">1 - 10 av 0</span>
+    <button class="page-btn" id="prevBtn" onclick="changePage(currentPage-1)">&lsaquo;</button>
+    <button class="page-btn" id="nextBtn" onclick="changePage(currentPage+1)">&rsaquo;</button>
   </div>
 
   <div class="toast" id="toast"></div>
 
   <script>
-    const API = '';
+    let allOppdrag = [];
+    let currentFilter = 'alle';
+    let currentPage = 1;
+    let searchQuery = '';
 
+    // ── Data loading ──
     async function loadData() {
       try {
-        const res = await fetch(`${API}/api/dashboard-data`);
+        const res = await fetch('/api/dashboard-data');
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
+
+        allOppdrag = data.oppdrag || [];
         renderStats(data);
-        renderTable(data.oppdrag);
-        renderStatusOverview(data.statusCounts);
-        document.getElementById('modeLabel').textContent = data.testMode ? 'TESTMODUS' : 'Produksjon';
-        document.getElementById('modeLabel').className = data.testMode ? 'mode test' : 'mode';
+        updateTabCounts(data.statusCounts, allOppdrag);
+        renderCards();
+
+        const ml = document.getElementById('modeLabel');
+        ml.textContent = data.testMode ? 'TESTMODUS' : 'Produksjon';
+        ml.className = data.testMode ? 'mode-badge test' : 'mode-badge prod';
       } catch (e) {
-        document.getElementById('oppdragTable').innerHTML = `<div class="empty">Kunne ikke hente data: ${e.message}</div>`;
+        document.getElementById('cardList').innerHTML = `<div class="empty">Kunne ikke hente data: ${e.message}</div>`;
       }
     }
+
+    function fmt(n) { return n != null && n > 0 ? Number(n).toLocaleString('nb-NO') + ' kr' : '-'; }
 
     function renderStats(data) {
-      const fmt = (n) => n != null ? Number(n).toLocaleString('nb-NO') + ' kr' : '0 kr';
-      const grid = document.getElementById('statsGrid');
-      grid.innerHTML = `
-        <div class="stat-card"><div class="label">Totalt oppdrag</div><div class="value">${data.total || 0}</div></div>
-        <div class="stat-card"><div class="label">Aktive</div><div class="value">${data.active || 0}</div></div>
-        <div class="stat-card"><div class="label">Utestående (inkl mva)</div><div class="value warn">${fmt(data.utestaendeInkl)}</div></div>
-        <div class="stat-card"><div class="label">Omsetning denne mnd</div><div class="value">${fmt(data.omsMaaned)}</div></div>
-        <div class="stat-card"><div class="label">Omsetning i år</div><div class="value">${fmt(data.omsAar)}</div></div>
-        <div class="stat-card"><div class="label">Snitt pris (inkl)</div><div class="value">${fmt(data.snittPrisInkl)}</div></div>
-      `;
+      document.getElementById('statTotal').textContent = data.total || 0;
+      document.getElementById('statActive').textContent = data.active || 0;
+      document.getElementById('statUtestaaende').textContent = fmt(data.utestaendeInkl);
+      document.getElementById('statMaaned').textContent = fmt(data.omsMaaned);
+      document.getElementById('statAar').textContent = fmt(data.omsAar);
+      document.getElementById('statSnitt').textContent = fmt(data.snittPrisInkl);
     }
 
-    function statusClass(s) {
-      const map = {
-        'Mottatt': 'mottatt', 'Avtalt befaring': 'avtalt', 'Befart': 'befart',
-        'Utkast': 'utkast', 'Endelig rapport': 'endelig',
-        'Kan faktureres': 'faktureres', 'Fakturert': 'fakturert', 'Oppdrag fullført': 'fullfort'
-      };
-      return 'status status-' + (map[s] || 'mottatt');
+    function updateTabCounts(counts, oppdrag) {
+      const c = counts || {};
+      document.getElementById('countAlle').textContent = oppdrag.length;
+      document.getElementById('countMottatt').textContent = c['Mottatt'] || 0;
+      document.getElementById('countAvtalt').textContent = c['Avtalt befaring'] || 0;
+      document.getElementById('countBefart').textContent = c['Befart'] || 0;
+      document.getElementById('countArbeid').textContent = (c['Utkast'] || 0) + (c['Endelig rapport'] || 0);
+      document.getElementById('countFaktureres').textContent = c['Kan faktureres'] || 0;
+      document.getElementById('countFerdig').textContent = (c['Fakturert'] || 0) + (c['Oppdrag fullført'] || 0);
     }
 
+    // ── Filtering ──
+    function getFiltered() {
+      let list = allOppdrag;
+      if (currentFilter === 'arbeid') {
+        list = list.filter(o => o.status === 'Utkast' || o.status === 'Endelig rapport');
+      } else if (currentFilter === 'ferdig') {
+        list = list.filter(o => o.status === 'Fakturert' || o.status === 'Oppdrag fullført');
+      } else if (currentFilter !== 'alle') {
+        list = list.filter(o => o.status === currentFilter);
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        list = list.filter(o =>
+          (o.adresse || '').toLowerCase().includes(q) ||
+          (o.oppdragsnr || '').toLowerCase().includes(q) ||
+          (o.megler || '').toLowerCase().includes(q) ||
+          (o.selger || '').toLowerCase().includes(q) ||
+          (o.oppdragstype || '').toLowerCase().includes(q)
+        );
+      }
+      return list;
+    }
+
+    function filterCards() {
+      searchQuery = document.getElementById('searchBox').value;
+      currentPage = 1;
+      renderCards();
+    }
+
+    // ── Tab click ──
+    document.getElementById('tabBar').addEventListener('click', e => {
+      const tab = e.target.closest('.tab');
+      if (!tab) return;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      currentPage = 1;
+      renderCards();
+    });
+
+    // ── Rendering ──
     function cleanAddress(addr) {
-      if (!addr) return '';
+      if (!addr) return { text: '', url: '' };
       const m = String(addr).match(/=HYPERLINK\("([^"]+)","([^"]+)"\)/);
-      if (m) return `<a href="${m[1]}" target="_blank" class="oppdrag-link">${m[2].replace(/""/g, '"')}</a>`;
-      return addr;
+      if (m) return { url: m[1], text: m[2].replace(/""/g, '"') };
+      return { text: addr, url: '' };
     }
 
-    function renderTable(oppdrag) {
-      const container = document.getElementById('oppdragTable');
-      if (!oppdrag || oppdrag.length === 0) {
-        container.innerHTML = '<div class="empty">Ingen aktive oppdrag</div>';
+    function tagClass(status) {
+      const map = {
+        'Mottatt': 'tag-mottatt', 'Avtalt befaring': 'tag-avtalt', 'Befart': 'tag-befart',
+        'Utkast': 'tag-utkast', 'Endelig rapport': 'tag-endelig',
+        'Kan faktureres': 'tag-faktureres', 'Fakturert': 'tag-fakturert', 'Oppdrag fullført': 'tag-fullfort'
+      };
+      return map[status] || 'tag-mottatt';
+    }
+
+    function houseIcon(type) {
+      const t = (type || '').toLowerCase();
+      if (t.includes('skade')) return '🔧';
+      if (t.includes('reklamasjon')) return '⚠️';
+      if (t.includes('vurdering') || t.includes('verdi')) return '💰';
+      if (t.includes('overtagelse')) return '🤝';
+      return '🏠';
+    }
+
+    function renderCards() {
+      const container = document.getElementById('cardList');
+      const filtered = getFiltered();
+      const pageSize = parseInt(document.getElementById('pageSize').value);
+      const start = (currentPage - 1) * pageSize;
+      const page = filtered.slice(start, start + pageSize);
+      const totalPages = Math.ceil(filtered.length / pageSize);
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty">Ingen oppdrag funnet</div>';
+        document.getElementById('pagination').style.display = 'none';
         return;
       }
-      const fmt = (n) => n ? Number(n).toLocaleString('nb-NO') + ' kr' : '-';
-      let html = `<table>
-        <thead><tr>
-          <th>Nr</th><th>Dato</th><th>Adresse</th><th>Type</th>
-          <th>Megler</th><th>Status</th><th>Pris inkl</th><th>Reise inkl</th>
-        </tr></thead><tbody>`;
-      for (const o of oppdrag) {
-        html += `<tr>
-          <td>${o.oppdragsnr || ''}</td>
-          <td>${o.datoMottatt || ''}</td>
-          <td>${cleanAddress(o.adresse)}</td>
-          <td>${o.oppdragstype || ''}</td>
-          <td>${o.megler || ''}</td>
-          <td><span class="${statusClass(o.status)}">${o.status || ''}</span></td>
-          <td style="text-align:right">${fmt(o.prisInkl)}</td>
-          <td style="text-align:right">${fmt(o.reiseInkl)}</td>
-        </tr>`;
+
+      let html = '';
+      for (const o of page) {
+        const addr = cleanAddress(o.adresse);
+        const addrHtml = addr.url
+          ? `<a href="${addr.url}" target="_blank">${addr.text}</a>`
+          : addr.text;
+
+        html += `
+        <div class="oppdrag-card">
+          <div class="card-icon">${houseIcon(o.oppdragstype)}</div>
+          <div class="card-main">
+            <div class="card-address"><span class="card-pin">&#x1F4CD;</span> ${addrHtml}</div>
+            <div class="card-meta">
+              <span class="card-tag ${tagClass(o.status)}">${o.status || ''}</span>
+              <span class="card-tag tag-type">${o.oppdragstype || ''}</span>
+              ${o.oppdragsnr ? `<span style="font-size:12px;color:#999">${o.oppdragsnr}</span>` : ''}
+            </div>
+            <div class="card-dates">Opprettet: ${o.datoMottatt || '-'}</div>
+          </div>
+          <div class="card-info">
+            <span class="name">${o.selger || o.megler || '-'}</span>
+            <span class="phone">${o.selgerTlf || ''}</span>
+          </div>
+          <div class="card-price">
+            <div class="amount">${fmt(o.prisInkl)}</div>
+            ${o.reiseInkl ? `<div class="sub">+ ${fmt(o.reiseInkl)} reise</div>` : ''}
+          </div>
+        </div>`;
       }
-      html += '</tbody></table>';
       container.innerHTML = html;
+
+      // Pagination
+      const pag = document.getElementById('pagination');
+      pag.style.display = 'flex';
+      document.getElementById('pageInfo').textContent = `${start + 1} - ${Math.min(start + pageSize, filtered.length)} av ${filtered.length}`;
+      document.getElementById('prevBtn').disabled = currentPage <= 1;
+      document.getElementById('nextBtn').disabled = currentPage >= totalPages;
     }
 
-    function renderStatusOverview(counts) {
-      const container = document.getElementById('statusOverview');
-      if (!counts) { container.innerHTML = ''; return; }
-      const colors = {
-        'Mottatt': '#ff9800', 'Avtalt befaring': '#42a5f5', 'Befart': '#5c6bc0',
-        'Utkast': '#ef5350', 'Endelig rapport': '#ab47bc',
-        'Kan faktureres': '#66bb6a', 'Fakturert': '#43a047', 'Oppdrag fullført': '#a5d6a7'
-      };
-      const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
-      let bar = '<div class="status-bar">';
-      let legend = '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:13px;">';
-      for (const [status, count] of Object.entries(counts)) {
-        if (count === 0) continue;
-        const color = colors[status] || '#ccc';
-        const pct = (count / total * 100).toFixed(1);
-        bar += `<div style="width:${pct}%;background:${color}" title="${status}: ${count}"></div>`;
-        legend += `<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${color};margin-right:4px;vertical-align:middle;"></span>${status}: ${count}</span>`;
-      }
-      bar += '</div>';
-      legend += '</div>';
-      container.innerHTML = bar + legend;
+    function changePage(p) {
+      const filtered = getFiltered();
+      const pageSize = parseInt(document.getElementById('pageSize').value);
+      const totalPages = Math.ceil(filtered.length / pageSize);
+      currentPage = Math.max(1, Math.min(p, totalPages));
+      renderCards();
     }
 
+    // ── Actions ──
     async function runAction(action) {
-      const btn = event.target;
+      const btn = event.target.closest('.nav-btn, .btn');
+      if (!btn) return;
       btn.disabled = true;
-      const originalText = btn.textContent;
+      const orig = btn.textContent;
       btn.textContent = 'Kjører...';
       try {
-        const res = await fetch(`${API}/api/${action}`, { method: 'POST' });
+        const res = await fetch(`/api/${action}`, { method: 'POST' });
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
-        showToast(`${action}: OK`, 'success');
+        showToast(`${orig}: OK`, 'success');
         if (['scan-emails', 'process-ivit', 'update-dashboard', 'send-faktura'].includes(action)) {
           setTimeout(loadData, 1000);
         }
       } catch (e) {
-        showToast(`${action}: ${e.message}`, 'error');
+        showToast(`Feil: ${e.message}`, 'error');
       } finally {
         btn.disabled = false;
-        btn.textContent = originalText;
+        btn.textContent = orig;
       }
+    }
+
+    function setView(v) {
+      // Future: add more views
     }
 
     function showToast(msg, type) {
@@ -234,6 +386,7 @@
       setTimeout(() => { toast.className = 'toast'; }, 4000);
     }
 
+    // ── Init ──
     loadData();
     setInterval(loadData, 60000);
   </script>
