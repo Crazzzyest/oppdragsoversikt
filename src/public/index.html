@@ -18,6 +18,12 @@
     .mode-badge { padding: 4px 14px; border-radius: 12px; font-size: 12px; font-weight: 600; }
     .mode-badge.prod { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); }
     .mode-badge.test { background: #ff9800; color: #333; }
+    .mode-badge.demo { background: #ffeb3b; color: #333; }
+
+    /* ── Demo banner ── */
+    .demo-banner { background: #fff8c5; border-bottom: 1px solid #f0d97d; color: #6b5900; padding: 10px 24px; font-size: 13px; display: none; align-items: center; gap: 10px; }
+    .demo-banner.on { display: flex; }
+    .demo-banner strong { color: #5c4a00; }
 
     /* ── Filter tabs ── */
     .tab-bar { background: white; border-bottom: 1px solid #e0e0e0; padding: 0 24px; display: flex; align-items: center; gap: 0; overflow-x: auto; }
@@ -126,6 +132,12 @@
     </div>
   </nav>
 
+  <!-- Demo banner -->
+  <div class="demo-banner" id="demoBanner">
+    <strong>DEMO</strong>
+    <span>Dette er en demonstrasjon med oppdiktede data. Ingen e-post sendes, ingen API-kall gjøres, og alle handlinger er simulerte.</span>
+  </div>
+
   <!-- Filter tabs -->
   <div class="tab-bar" id="tabBar">
     <div class="tab active" data-filter="alle">Alle oppdrag <span class="count" id="countAlle">0</span></div>
@@ -196,8 +208,17 @@
         renderCards();
 
         const ml = document.getElementById('modeLabel');
-        ml.textContent = data.testMode ? 'TESTMODUS' : 'Produksjon';
-        ml.className = data.testMode ? 'mode-badge test' : 'mode-badge prod';
+        if (data.demoMode) {
+          ml.textContent = 'DEMO';
+          ml.className = 'mode-badge demo';
+          document.getElementById('demoBanner').classList.add('on');
+        } else if (data.testMode) {
+          ml.textContent = 'TESTMODUS';
+          ml.className = 'mode-badge test';
+        } else {
+          ml.textContent = 'Produksjon';
+          ml.className = 'mode-badge prod';
+        }
       } catch (e) {
         document.getElementById('cardList').innerHTML = `<div class="empty">Kunne ikke hente data: ${e.message}</div>`;
       }

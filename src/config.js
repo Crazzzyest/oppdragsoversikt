@@ -3,6 +3,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 const config = {
   testMode: process.env.TEST_MODE === 'true',
+  demoMode: process.env.DEMO_MODE === 'true',
 
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID,

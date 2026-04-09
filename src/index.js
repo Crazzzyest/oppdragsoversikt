@@ -13,11 +13,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ============================================================
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', testMode: config.testMode, timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', testMode: config.testMode, demoMode: config.demoMode, timestamp: new Date().toISOString() });
 });
+
+// --- Demo mode helpers ---
+function demoOk(extra = {}) {
+  return { success: true, demoMode: true, ...extra };
+}
 
 // --- Dashboard data (for frontend) ---
 app.get('/api/dashboard-data', async (req, res) => {
+  if (config.demoMode) {
+    const { getDemoDashboardData } = require('./demo-data');
+    return res.json(getDemoDashboardData());
+  }
   try {
     const google = require('./google');
     const { parseDateString } = require('./utils');
@@ -90,6 +99,7 @@ app.get('/api/dashboard-data', async (req, res) => {
 
 // --- Email scanning ---
 app.post('/api/scan-emails', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: simulert e-postskanning fullført', processed: 0 }));
   try {
     const { scanIncomingEmails } = require('./scanner');
     const result = await scanIncomingEmails();
@@ -102,6 +112,7 @@ app.post('/api/scan-emails', async (req, res) => {
 
 // --- IVIT scraping ---
 app.post('/api/process-ivit', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: simulert IVIT-scraping fullført', processed: 0 }));
   try {
     const { processIVITScraping } = require('./ivit');
     const result = await processIVITScraping();
@@ -114,6 +125,7 @@ app.post('/api/process-ivit', async (req, res) => {
 
 // --- Dashboard ---
 app.post('/api/update-dashboard', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: dashboard oppdatert' }));
   try {
     const { updateDashboard } = require('./dashboard');
     await updateDashboard();
@@ -126,6 +138,7 @@ app.post('/api/update-dashboard', async (req, res) => {
 
 // --- Reminders ---
 app.post('/api/check-reminders', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: påminnelser sjekket', sent: 0 }));
   try {
     const { checkReminders } = require('./reminders');
     const result = await checkReminders();
@@ -138,6 +151,7 @@ app.post('/api/check-reminders', async (req, res) => {
 
 // --- Weekly report ---
 app.post('/api/send-weekly-report', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: ukesrapport simulert (ingen e-post sendt)' }));
   try {
     const { sendWeeklyReport } = require('./reminders');
     await sendWeeklyReport();
@@ -150,6 +164,7 @@ app.post('/api/send-weekly-report', async (req, res) => {
 
 // --- Send faktura ---
 app.post('/api/send-faktura', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: faktura-batch simulert (ingen e-post sendt)', count: 0 }));
   try {
     const { sendFakturaTilRegnskap } = require('./oppdrag');
     const count = await sendFakturaTilRegnskap();
@@ -162,6 +177,9 @@ app.post('/api/send-faktura', async (req, res) => {
 
 // --- Manual registration ---
 app.post('/api/register-oppdrag', async (req, res) => {
+  if (config.demoMode) {
+    return res.json(demoOk({ message: 'Demo: oppdrag registrert (ikke lagret)', oppdragsnr: 'DEMO-000' }));
+  }
   try {
     const { adresse, selger, telefon, epost, boligtype, rapporttype, areal, megler, merknad } = req.body;
     if (!adresse) {
@@ -180,6 +198,7 @@ app.post('/api/register-oppdrag', async (req, res) => {
 
 // --- Status change ---
 app.post('/api/status-change', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: status endret (ikke lagret)' }));
   try {
     const { row, status } = req.body;
     if (!row || !status) {
@@ -196,6 +215,7 @@ app.post('/api/status-change', async (req, res) => {
 
 // --- Recalculate price ---
 app.post('/api/recalculate-price', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: pris rekalkulert (ikke lagret)' }));
   try {
     const { row } = req.body;
     if (!row) {
@@ -212,6 +232,7 @@ app.post('/api/recalculate-price', async (req, res) => {
 
 // --- Recalculate travel ---
 app.post('/api/recalculate-travel', async (req, res) => {
+  if (config.demoMode) return res.json(demoOk({ message: 'Demo: reisekostnad rekalkulert (ikke lagret)' }));
   try {
     const { row, address } = req.body;
     if (!row || !address) {
@@ -227,8 +248,12 @@ app.post('/api/recalculate-travel', async (req, res) => {
 });
 
 // ============================================================
-// CRON JOBS
+// CRON JOBS (skipped in demo mode)
 // ============================================================
+
+if (config.demoMode) {
+  console.log('Demo mode: cron jobs disabled, no external API calls.');
+} else {
 
 // Scan emails every 5 minutes
 cron.schedule('*/5 * * * *', async () => {
@@ -280,6 +305,8 @@ cron.schedule('0 16 * * 5', async () => {
   }
 });
 
+} // end if !demoMode
+
 // ============================================================
 // START SERVER
 // ============================================================
@@ -287,7 +314,10 @@ cron.schedule('0 16 * * 5', async () => {
 const server = app.listen(config.port, () => {
   console.log(`Naava Takst webapp listening on port ${config.port}`);
   console.log(`Test mode: ${config.testMode}`);
-  console.log('Cron jobs: scan(5m), reminders(1h), dashboard(1h), ivit(15m), weekly(Fri 16:00)');
+  console.log(`Demo mode: ${config.demoMode}`);
+  if (!config.demoMode) {
+    console.log('Cron jobs: scan(5m), reminders(1h), dashboard(1h), ivit(15m), weekly(Fri 16:00)');
+  }
 });
 
 async function shutdown(signal) {
