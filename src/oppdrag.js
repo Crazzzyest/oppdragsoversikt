@@ -356,19 +356,6 @@ async function createNewOppdrag(parsed, date, skipOrdreGate = false) {
     await google.appendRow(config.sheet.name, newRow);
     console.log('  Row written');
 
-    const settingsForNotify = await require('./settings').get();
-    if (settingsForNotify['email.sendNewOppdragNotification']) {
-      const { buildNewOppdragEmail } = require('./emails');
-      const { substitute } = require('./utils');
-      const subject = substitute(settingsForNotify['email.nyttOppdragSubject'], {
-        adresse: parsed.adresse, oppdragstype: parsed.oppdragstype,
-      });
-      const html = buildNewOppdragEmail(parsed, datoMottatt, folderUrl, oppdragsnr, avstandKm, reiseEks, reiseInkl, {
-        intro: settingsForNotify['email.nyttOppdragIntro'],
-      });
-      await google.sendEmail(config.email.ownerEmail, subject, html);
-    }
-
     return oppdragsnr;
 
   } catch (err) {
