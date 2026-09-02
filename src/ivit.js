@@ -8,12 +8,19 @@ async function fetchIvitData(address) {
     return { success: false, error: 'Tom adresse' };
   }
 
-  // Read IVIT credentials from settings (Innstillinger-sheet). If blank, the
-  // scraper falls back to its own env vars (back-compat with previous deploy).
+  // IVIT credentials come from settings (Innstillinger-sheet), and are treated
+  // as a PAIR: either the app owns both, or the scraper falls back to its own
+  // IVIT_USERNAME/IVIT_PASSWORD env vars for both. Sending only one half would
+  // silently mix a username from here with a password from there, which breaks
+  // login in a way that is very hard to diagnose.
   const settings = await require('./settings').get();
   const body = { address: address.trim() };
-  if (settings['ivit.username']) body.ivitUsername = settings['ivit.username'];
-  if (settings['ivit.password']) body.ivitPassword = settings['ivit.password'];
+  const ivitUser = (settings['ivit.username'] || '').trim();
+  const ivitPass = (settings['ivit.password'] || '').trim();
+  if (ivitUser && ivitPass) {
+    body.ivitUsername = ivitUser;
+    body.ivitPassword = ivitPass;
+  }
 
   const options = {
     method: 'POST',
