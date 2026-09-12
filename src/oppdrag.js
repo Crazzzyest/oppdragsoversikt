@@ -527,12 +527,19 @@ async function sendFakturaTilRegnskap() {
       const { substitute, extractAddressFromHyperlink } = require('./utils');
       const cleanAdr = extractAddressFromHyperlink(adresse);
 
+      // The status-change date must be stamped here too. "Denne mnd" on the
+      // stats strip, the weekly report and the Fakturalogg all attribute an
+      // invoice to this date, so without it a row invoiced via the checkbox
+      // stayed filed under whatever month its previous status change was in.
+      const markFakturert = [
+        { col: COL.KAN_FAKTURERES, value: false },
+        { col: COL.STATUS, value: 'Fakturert' },
+        { col: COL.DATO_STATUSENDRING, value: datoStr },
+      ];
+
       if (!settings['email.sendFakturaToAccountant']) {
         // Still mark as Fakturert + archive, but skip email
-        await google.updateCells(config.sheet.name, rowNum, [
-          { col: COL.KAN_FAKTURERES, value: false },
-          { col: COL.STATUS, value: 'Fakturert' },
-        ]);
+        await google.updateCells(config.sheet.name, rowNum, markFakturert);
         await archiveRow(rowData);
         count++;
         continue;
@@ -542,10 +549,7 @@ async function sendFakturaTilRegnskap() {
       const html = buildFakturaEmail(rowData, datoStr);
       await google.sendEmail(config.email.accountantEmail, subject, html);
 
-      await google.updateCells(config.sheet.name, rowNum, [
-        { col: COL.KAN_FAKTURERES, value: false },
-        { col: COL.STATUS, value: 'Fakturert' },
-      ]);
+      await google.updateCells(config.sheet.name, rowNum, markFakturert);
 
       await archiveRow(rowData);
       count++;

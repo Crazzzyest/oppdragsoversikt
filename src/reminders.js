@@ -1,8 +1,9 @@
 const config = require('./config');
 const { COL } = require('./columns');
 const google = require('./google');
-const { parseDateString, formatCurrency, getWeekNumber } = require('./utils');
+const { parseDateString, formatCurrency, getWeekNumber, extractAddressFromHyperlink } = require('./utils');
 const { buildWeeklyReportHtml } = require('./emails');
+const { parseSheetNumber } = require('./data');
 
 async function checkReminders() {
   console.log('Checking reminders...');
@@ -53,26 +54,29 @@ async function sendWeeklyReport() {
   monday.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
   monday.setHours(0, 0, 0, 0);
 
-  const fakturerbare = [];
+  // The report is about what was INVOICED this week. Invoicing flips a row
+  // straight from "Kan faktureres" to "Fakturert", so nothing ever sits in
+  // "Kan faktureres" by Friday — summing that status (as this used to) always
+  // produced 0 kr. "Venter" is what is queued but not yet sent: either the
+  // status or the Fakturer-checkbox, which is how the card checkbox works.
   const fakturerte = [];
   const ventende = [];
   let totalInklMva = 0, totalEksMva = 0, totalMva = 0, totalReiseEks = 0, totalReiseInkl = 0;
 
   for (let i = 1; i < data.length; i++) {
     const status = data[i][COL.STATUS - 1];
-    const prisInkl = Number(data[i][COL.PRIS_INKL - 1] || 0);
-    const prisEks = Number(data[i][COL.PRIS_EKS - 1] || 0);
-    const mvaBeløp = Number(data[i][COL.MVA_BELOP - 1] || 0);
-    const reiseEks = Number(data[i][COL.REISE_EKS - 1] || 0);
-    const reiseInkl = Number(data[i][COL.REISE_INKL - 1] || 0);
+    const kanFaktureres = data[i][COL.KAN_FAKTURERES - 1] === true || data[i][COL.KAN_FAKTURERES - 1] === 'TRUE';
+    const prisInkl = parseSheetNumber(data[i][COL.PRIS_INKL - 1]) || 0;
+    const prisEks = parseSheetNumber(data[i][COL.PRIS_EKS - 1]) || 0;
+    const mvaBeløp = parseSheetNumber(data[i][COL.MVA_BELOP - 1]) || 0;
+    const reiseEks = parseSheetNumber(data[i][COL.REISE_EKS - 1]) || 0;
+    const reiseInkl = parseSheetNumber(data[i][COL.REISE_INKL - 1]) || 0;
     const statusDatoStr = data[i][COL.DATO_STATUSENDRING - 1];
-
     const sDato = parseDateString(statusDatoStr);
-    if (!sDato) continue;
 
     const item = {
       oppdragsnr: data[i][COL.OPPDRAGSNR - 1],
-      adresse: data[i][COL.ADRESSE - 1],
+      adresse: extractAddressFromHyperlink(data[i][COL.ADRESSE - 1]),
       oppdragstype: data[i][COL.OPPDRAGSTYPE - 1],
       prisInkl, prisEks, mvaBeløp, reiseEks, reiseInkl,
       fakturaRef: data[i][COL.FAKTURA_REF - 1],
@@ -80,16 +84,16 @@ async function sendWeeklyReport() {
       statusDato: statusDatoStr,
     };
 
-    if (status === 'Kan faktureres' && sDato >= monday) {
-      fakturerbare.push(item);
+    if (status === 'Fakturert' && sDato && sDato >= monday) {
+      fakturerte.push(item);
       totalInklMva += prisInkl; totalEksMva += prisEks; totalMva += mvaBeløp;
       totalReiseEks += reiseEks; totalReiseInkl += reiseInkl;
+    } else if (status === 'Kan faktureres' || (kanFaktureres && status !== 'Fakturert')) {
+      ventende.push(item);
     }
-    if (status === 'Fakturert' && sDato >= monday) fakturerte.push(item);
-    if (status === 'Kan faktureres') ventende.push(item);
   }
 
-  const html = buildWeeklyReportHtml(fakturerbare, fakturerte, ventende, {
+  const html = buildWeeklyReportHtml(fakturerte, ventende, {
     totalInklMva, totalEksMva, totalMva, totalReiseEks, totalReiseInkl,
   });
 

@@ -303,34 +303,47 @@ function buildNewOppdragEmail(parsed, dato, folderUrl, oppdragsnr, avstandKm, re
     `<p style="margin-top:16px;"><a href="${folderUrl}" style="background:#1a5c2a;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">Åpne mappe</a></p></div></div>`;
 }
 
-function buildWeeklyReportHtml(fakturerbare, fakturerte, ventende, totals) {
+function buildWeeklyReportHtml(fakturerte, ventende, totals) {
   const { getWeekNumber } = require('./utils');
   const ukeNr = getWeekNumber(new Date());
-  let rows = '';
-  fakturerbare.forEach(o => {
-    rows += `<tr><td style="padding:5px;border-bottom:1px solid #eee;">${o.oppdragsnr}</td>` +
-      `<td style="padding:5px;">${o.adresse}</td><td style="padding:5px;">${o.oppdragstype}</td>` +
-      `<td style="padding:5px;">${o.fakturaRef || '-'}</td>` +
-      `<td style="padding:5px;text-align:right;">${formatCurrency(o.prisEks)}</td>` +
-      `<td style="padding:5px;text-align:right;">${formatCurrency(o.mvaBeløp)}</td>` +
-      `<td style="padding:5px;text-align:right;font-weight:bold;">${formatCurrency(o.prisInkl)}</td>` +
-      `<td style="padding:5px;text-align:right;">${formatCurrency(o.reiseInkl)}</td></tr>`;
-  });
+
+  const td = (v, extra = '') => `<td style="padding:5px;border-bottom:1px solid #eee;${extra}">${v}</td>`;
+  const rowHtml = (o) =>
+    `<tr>${td(o.oppdragsnr)}${td(o.adresse)}${td(o.oppdragstype)}${td(o.fakturaRef || '-')}` +
+    `${td(formatCurrency(o.prisEks), 'text-align:right;')}${td(formatCurrency(o.mvaBeløp), 'text-align:right;')}` +
+    `${td(formatCurrency(o.prisInkl), 'text-align:right;font-weight:bold;')}${td(formatCurrency(o.reiseInkl), 'text-align:right;')}</tr>`;
+  const header =
+    '<table style="width:100%;border-collapse:collapse;font-size:11px;"><tr style="background:#f5f5f5;">' +
+    '<th style="padding:5px;text-align:left;">Nr</th><th style="text-align:left;">Adresse</th><th style="text-align:left;">Type</th><th style="text-align:left;">Ref</th>' +
+    '<th style="text-align:right;">Eks mva</th><th style="text-align:right;">MVA</th>' +
+    '<th style="text-align:right;">Inkl mva</th><th style="text-align:right;">Reise inkl</th></tr>';
+
+  const fakturertSection =
+    `<h3 style="margin-top:0;">Fakturert denne uken (${fakturerte.length})</h3>` +
+    (fakturerte.length > 0
+      ? header + fakturerte.map(rowHtml).join('') +
+        '<tr style="background:#1a5c2a;color:white;font-weight:bold;">' +
+        `<td colspan="4" style="padding:8px;">TOTAL</td>` +
+        `<td style="padding:8px;text-align:right;">${formatCurrency(totals.totalEksMva)}</td>` +
+        `<td style="padding:8px;text-align:right;">${formatCurrency(totals.totalMva)}</td>` +
+        `<td style="padding:8px;text-align:right;font-size:14px;">${formatCurrency(totals.totalInklMva)}</td>` +
+        `<td style="padding:8px;text-align:right;">${formatCurrency(totals.totalReiseInkl)}</td></tr></table>` +
+        `<p style="margin:10px 0 0;font-size:13px;">Fakturert inkl. reise: <strong>${formatCurrency(totals.totalInklMva + totals.totalReiseInkl)}</strong></p>`
+      : '<p style="color:#666;">Ingen fakturert denne uken.</p>');
+
+  const ventendeSection =
+    `<h3 style="margin-top:24px;">Venter på fakturering (${ventende.length})</h3>` +
+    (ventende.length > 0
+      ? header + ventende.map(rowHtml).join('') + '</table>' +
+        '<p style="margin:10px 0 0;font-size:12px;color:#666;">Merket som klar, men fakturaen er ikke sendt til regnskap ennå.</p>'
+      : '<p style="color:#666;">Ingenting i kø.</p>');
 
   return '<div style="font-family:Arial,sans-serif;max-width:900px;">' +
     '<div style="background:#1a5c2a;color:white;padding:20px;border-radius:8px 8px 0 0;">' +
     `<h2 style="margin:0;">Ukerapport uke ${ukeNr}</h2></div>` +
     '<div style="padding:20px;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;">' +
     (config.testMode ? '<div style="background:#fff3e0;padding:8px;border-radius:4px;margin-bottom:12px;">TESTMODUS</div>' : '') +
-    `<h3>Fakturerbart (${fakturerbare.length})</h3>` +
-    (fakturerbare.length > 0 ?
-      '<table style="width:100%;border-collapse:collapse;font-size:11px;"><tr style="background:#f5f5f5;">' +
-      '<th style="padding:5px;text-align:left;">Nr</th><th>Adresse</th><th>Type</th><th>Ref</th>' +
-      '<th style="text-align:right;">Eks mva</th><th style="text-align:right;">MVA</th>' +
-      '<th style="text-align:right;">Inkl mva</th><th style="text-align:right;">Reise inkl</th></tr>' + rows +
-      '<tr style="background:#1a5c2a;color:white;font-weight:bold;"><td colspan="4">TOTAL</td>' +
-      `<td colspan="4" style="text-align:right;font-size:14px;">${formatCurrency(totals.totalInklMva + totals.totalReiseInkl)}</td></tr></table>` :
-      '<p style="color:#666;">Ingen denne uken.</p>') +
+    fakturertSection + ventendeSection +
     '</div></div>';
 }
 

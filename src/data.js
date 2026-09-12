@@ -439,4 +439,5 @@ module.exports = {
   PATCHABLE_FIELDS,
   bustCache,
   projectRow,
+  parseSheetNumber,
 };
