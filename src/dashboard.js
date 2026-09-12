@@ -131,7 +131,10 @@ function computeDashboardStats(data, opts = {}) {
       countPris++;
     }
 
-    if (status === 'Fakturert' && prisInkl > 0) {
+    // "Oppdrag fullført" follows "Fakturert" in the flow, so it is invoiced
+    // too — counting only "Fakturert" made this drop each time a job was
+    // marked complete. Same definition as "I år" on the stats strip.
+    if ((status === 'Fakturert' || status === 'Oppdrag fullført') && prisInkl > 0) {
       stats.omsFakturert += prisInkl;
       stats.fakturertÅr += prisInkl;
       stats.countFakturert++;

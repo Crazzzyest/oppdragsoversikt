@@ -11,6 +11,11 @@ const CACHE_TTL_MS = 5000;
 // oppdrag list/stats until Jacob approves them in the Ordre view.
 const ORDRE_STATUSES = ['Ordre', 'Ordre avvist'];
 
+// Statuses that mean the invoice has gone to regnskap. "Oppdrag fullført"
+// follows "Fakturert" in the flow, so it is invoiced too. Keep in sync with
+// fakturalogg.js and dashboard.js.
+const INVOICED_STATUSES = ['Fakturert', 'Oppdrag fullført'];
+
 // Sheet cells come back as locale-formatted strings ("16 000 kr", "12,800 kr",
 // "0,25", "0.25", or plain numbers). This extracts the numeric value robustly,
 // distinguishing comma-as-thousand-separator from comma-as-decimal-mark.
@@ -189,16 +194,26 @@ async function getDashboardData() {
       utestaendeInkl += prisInkl + reiseInkl;
     }
 
-    // Omsetning teller alle oppdrag som har gått gjennom systemet (har pris),
-    // unntatt kansellerte. Inkluderer Befart/Utkast/Endelig rapport/Kan faktureres/
-    // Fakturert/Oppdrag fullført.
-    const isCancelled = o.status === 'Oppdrag kansellert';
-    if (!isCancelled && prisInkl > 0) {
+    // "I år" / "Denne mnd" mean INVOICED revenue, the way the old Dashboard
+    // sheet counted it — not everything that merely has a price. That way the
+    // number moves when Jacob invoices, which is what he expects of it.
+    // "Oppdrag fullført" comes after "Fakturert" in the flow and is therefore
+    // invoiced too; counting only "Fakturert" would make the total DROP each
+    // time a job is marked complete. Same definition as the Fakturalogg.
+    // The month is taken from the status-change date, which batch invoicing
+    // now stamps (it used to leave the row in the previous month).
+    const isInvoiced = INVOICED_STATUSES.includes(o.status);
+    if (isInvoiced && prisInkl > 0) {
       omsAar += prisInkl;
       const sDato = parseDateString(o.datoStatusendring) || parseDateString(o.datoMottatt);
       if (sDato && sDato.getMonth() === curMonth && sDato.getFullYear() === curYear) {
         omsMaaned += prisInkl;
       }
+    }
+
+    // Snittpris stays an average over every priced, non-cancelled oppdrag —
+    // it describes pricing, not cash flow.
+    if (o.status !== 'Oppdrag kansellert' && prisInkl > 0) {
       sumPris += prisInkl;
       countPris++;
     }
